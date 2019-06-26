@@ -1,4 +1,5 @@
-trade_id,time,Symbol,prise,stock,qty
-
-1,20192506:2:43:00,hdfc,2421,buy,50
-2,20192507:2:43:00,ICI,2421,buy,50
+trade_id,time,symbol,sell_price,stock,qty
+1,20192506:2:42:30,hdfc,2421,buy,50
+2,20192507:2:42:30,ICI,2421,buy,50
+3,20192506:2:43:00,hdfc,2421,buy,50
+4,20192507:2:43:00,ICI,2421,buy,50
