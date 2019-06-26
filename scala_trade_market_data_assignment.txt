@@ -3,107 +3,108 @@ import org.apache.spark.sql.types.{ StructType, StructField, StringType, Integer
 
 object tradeExample {
 
-def main(args: Array[String]) = {
+  def main(args: Array[String]) = {
 
-val spark = SparkSession.builder
-.appName("Trade Data Example")
-.config("spark.executor.instances", "4").config("spark.executor.cores", "4")
-.config("spark.executor.memory", "8g").config("spark.driver.memory", "10g")
-.master("yarn")
-.enableHiveSupport()
-.getOrCreate();
+    val spark = SparkSession.builder
+      .appName("Trade Data Example")
+      .config("spark.executor.instances", "4").config("spark.executor.cores", "4")
+      .config("spark.executor.memory", "8g").config("spark.driver.memory", "10g")
+      .master("yarn")
+      .enableHiveSupport()
+      .getOrCreate();
 
-val masterSchema = StructType(Array(
-StructField("symbol", StringType, true),
-StructField("time", StringType, true),
-StructField("buy_price", StringType, true),
-StructField("sell_price", StringType, true),
-StructField("qty", StringType, true)))
+    val masterSchema = StructType(Array(
+      StructField("symbol", StringType, true),
+      StructField("time", StringType, true),
+      StructField("buy_price", StringType, true),
+      StructField("sell_price", StringType, true),
+      StructField("qty", StringType, true)))
 
-val masterData = spark.read.format("csv")
-.option("header", "true")
-.option("inferSchema", "true")
-.schema(masterSchema)
-.load("hdfs:///user/svcshdprtlbnkd01/master.csv")
+    val masterData = spark.read.format("csv")
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .schema(masterSchema)
+      .load("hdfs:///user/svcshdprtlbnkd01/master.csv")
 
-val traderSchema = StructType(Array(
-StructField("trade_id", StringType, true),
-StructField("time", StringType, true),
-StructField("symbol", StringType, true),
-StructField("sell_price", StringType, true),
-StructField("stock", StringType, true),
-StructField("qty", StringType, true)))
+    val traderSchema = StructType(Array(
+      StructField("trade_id", StringType, true),
+      StructField("time", StringType, true),
+      StructField("symbol", StringType, true),
+      StructField("sell_price", StringType, true),
+      StructField("stock", StringType, true),
+      StructField("qty", StringType, true)))
 
-val tradeData = spark.read.format("csv")
-.option("header", "true")
-.option("inferSchema", "true")
-.schema(traderSchema)
-.load("hdfs:///user/svcshdprtlbnkd01/trade.csv")
+    val tradeData = spark.read.format("csv")
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .schema(traderSchema)
+      .load("hdfs:///user/svcshdprtlbnkd01/trade.csv")
 
-val sel = masterData.select("*")
+    val sel = masterData.select("*")
 
-sel.createOrReplaceTempView("masterData_tmp")
+    sel.createOrReplaceTempView("masterData_tmp")
 
-spark.sql("""create table rtl_stg.master_tmp(
-symbol STRING,
-time STRING,
-buy_price STRING,
-sell_price STRING,
-qty STRING)
-STORED AS ORC""")
+    spark.sql("""create table rtl_stg.master_tmp(
+        symbol STRING,
+        time STRING,
+        buy_price STRING,
+        sell_price STRING,
+        qty STRING)
+        STORED AS ORC""")
 
-spark.sql("""INSERT INTO rtl_stg.master_tmp select * from master where time in (select max(time) from master group by symbol)""")
+    spark.sql("""INSERT INTO rtl_stg.master_tmp select * from master where time in (select max(time) from master group by symbol)""")
 
-val trsel = tradeData.select("*")
+    val trsel = tradeData.select("*")
 
-trsel.createOrReplaceTempView("tradeData_tmp")
+    trsel.createOrReplaceTempView("tradeData_tmp")
 
-spark.sql("""create table rtl_stg.trade_tmp(
-trade_id STRING,
-time STRING,
-symbol STRING,
-sell_price STRING,
-stock STRING,
-qty STRING)
-STORED AS ORC""")
+    spark.sql("""create table rtl_stg.trade_tmp(
+          trade_id STRING,
+          time STRING,
+          symbol STRING,
+          sell_price STRING,
+          stock STRING,
+          qty STRING)
+        STORED AS ORC""")
 
-spark.sql("""INSERT INTO rtl_stg.trade_tmp select * from tradeData_tmp""")
+    spark.sql("""INSERT INTO rtl_stg.trade_tmp select * from tradeData_tmp""")
 
-spark.sql("""create table rtl_stg.master(
-mHashKey string,
-symbol STRING,
-time STRING,
-buy_price STRING,
-sell_price STRING,
-qty STRING)
-STORED AS ORC""")
+    spark.sql("""create table rtl_stg.master(
+        mHashKey string,
+        symbol STRING,
+        time STRING,
+        buy_price STRING,
+        sell_price STRING,
+        qty STRING)
+        STORED AS ORC""")
 
-spark.sql("""create table rtl_stg.trade(
-mHashKey string, 
-trade_id STRING,
-time STRING,
-symbol STRING,
-sell_price STRING,
-stock STRING,
-qty STRING)
-STORED AS ORC""")
+    spark.sql("""create table rtl_stg.trade(
+        mHashKey string,        
+        trade_id STRING,
+          time STRING,
+          symbol STRING,
+          sell_price STRING,
+          stock STRING,
+          qty STRING)
+        STORED AS ORC""")
 
-val mCreate = masterData.sqlContext.sql("""INSERT INTO TABLE rtl_stg.master
-SELECT md5(concat(
-nvl(symbol,'')
-,nvl(time,''))) as mHashKey,symbol,time,buy_price,sell_price,qty from rtl_stg.master_tmp """)
+    val mCreate = masterData.sqlContext.sql("""INSERT INTO TABLE rtl_stg.master
+        SELECT md5(concat(
+             nvl(symbol,'')
+            ,nvl(time,''))) as mHashKey,symbol,time,buy_price,sell_price,qty from rtl_stg.master_tmp """)
 
-val tCreate = masterData.sqlContext.sql("""INSERT INTO TABLE rtl_stg.trade
-SELECT md5(concat(
-nvl(symbol,'')
-,nvl(time,''))) as tHashKey,trade_id,time,symbol,sell_price,stock,qty from rtl_stg.trade_tmp""")
+    val tCreate = masterData.sqlContext.sql("""INSERT INTO TABLE rtl_stg.trade
+        SELECT md5(concat(
+             nvl(symbol,'')
+            ,nvl(time,''))) as tHashKey,trade_id,time,symbol,sell_price,stock,qty from rtl_stg.trade_tmp""")
 
-spark.sql("""DROP TABLE rtl_stg.master_tmp""")
-spark.sql("""DROP TABLE rtl_stg.trade_tmp""")
+    spark.sql("""DROP TABLE rtl_stg.master_tmp""")
+    spark.sql("""DROP TABLE rtl_stg.trade_tmp""")
 
-val result = tradeData.sqlContext.sql("""select trade.mhashkey,master.mhashkey from trade inner join master on trade.mhashkey = master.mhashkey""")
-println("Unique Records ::>"+result.show(10))
+    val result = tradeData.sqlContext.sql("""select master.symbol,master.time,master.buy_price,trade.sell_price,master.qty from master inner join trade on master.mhashkey=trade.mhashkey""")
+    
+    println("Unique Records ::>"+result.show(10))
 
-}
+  }
 
 }
