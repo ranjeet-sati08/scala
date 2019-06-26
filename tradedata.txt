@@ -1,0 +1,4 @@
+trade_id,time,Symbol,prise,stock,qty
+
+1,20192506:2:43:00,hdfc,2421,buy,50
+2,20192507:2:43:00,ICI,2421,buy,50
